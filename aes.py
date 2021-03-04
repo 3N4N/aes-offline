@@ -85,6 +85,7 @@ key = 'Thats my Kung Fu'
 # key = input("Enter the key: ")
 key = key.encode('utf-8').hex()
 
+
 def keygen(key):
     key_hex = key.encode('utf-8').hex()
     if len(key_hex) < 32:
@@ -93,10 +94,12 @@ def keygen(key):
         key_hex = key_hex[:32]
     return key_hex
 
+
 def padtext(text):
     if len(text) % 16 != 0:
         return text.ljust((len(text) // 16 + 1) * 16, '0')
     return text
+
 
 def bytes_to_matrix(text):
     mat = []
@@ -107,13 +110,6 @@ def bytes_to_matrix(text):
         li = [int(_, 16) for _ in li]
         mat.append(li)
     return mat
-
-w = bytes_to_matrix(key)
-
-plain_text = 'Two One Nine Two'
-plain_text = plain_text.encode('utf-8').hex()
-text_hex = bytes.fromhex(plain_text)
-# print(text_hex)
 
 
 def transpose_matrix(mat):
@@ -127,6 +123,7 @@ def print_Xx4(key_mat):
               [hex(x) for x in key_mat[i * 4 + 2]],
               [hex(x) for x in key_mat[i * 4 + 3]])
     # print([list(map(hex,x)) for x in key_mat])
+
 
 def round_key_gen(key):
 
@@ -191,8 +188,8 @@ def mix_cols(t):
             t[i][j] = _t[i][j]
 
 
-def encrypt_block(n_rnd, key_mat, text):
-    txt_mat = bytes_to_matrix(text)
+def encrypt_block(n_rnd, key_mat, plaintext):
+    txt_mat = bytes_to_matrix(plaintext)
     txt_mat = transpose_matrix(txt_mat)
 
     rnd_key = []
@@ -225,18 +222,38 @@ def encrypt_block(n_rnd, key_mat, text):
     rnd_key = transpose_matrix(rnd_key)
     add_rnd_key(txt_mat, rnd_key)
 
-    print_Xx4(txt_mat)
+    # print_Xx4(txt_mat)
 
-def encrypt(key, data):
+    txt_mat = transpose_matrix(txt_mat)
+    ciphertext = ''
+    for i in range(len(txt_mat)):
+        for j in range(len(txt_mat[i])):
+            ciphertext += "{:02x}".format(txt_mat[i][j])
+    return ciphertext
+
+
+def encrypt(key, plaintext):
     key = keygen(key)
-    data = padtext(data)
-    data = data.encode('utf-8').hex()
-    print(key)
-    print(data)
+    plaintext = padtext(plaintext)
+    plaintext = plaintext.encode('utf-8').hex()
     key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
-    encrypt_block(10, rnd_keys, data)
+    ciphertext = encrypt_block(10, rnd_keys, plaintext)
+    return ciphertext
 
 
 key = 'Thats my Kung Fu DU'
-encrypt(key, 'Two One Nine Two')
+# key = 'BUET CSE16 Batch'
+plaintext = 'Two One Nine Two'
+# plaintext = 'WillGraduateSoon'
+print('Key:')
+print(key, '[ASCII]')
+print(key.encode('utf-8').hex(), '[HEX]\n')
+print('Plain Text:')
+print(plaintext, '[ASCII]')
+print(plaintext.encode('utf-8').hex(), '[HEX]\n')
+
+ciphertext = encrypt(key, plaintext)
+print('Cipher Text:')
+print(ciphertext, '[HEX]')
+# print(bytearray.fromhex(ciphertext).decode(), '[ASCII]')
