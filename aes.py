@@ -116,6 +116,8 @@ text_hex = bytes.fromhex(plain_text)
 # print(text_hex)
 
 
+def transpose_matrix(mat):
+    return list(map(list, zip(*mat)))
 
 
 def print_key_mat(key_mat):
