@@ -93,6 +93,10 @@ def keygen(key):
         key_hex = key_hex[:32]
     return key_hex
 
+def padtext(text):
+    if len(text) % 16 != 0:
+        return text.ljust((len(text) // 16 + 1) * 16, '0')
+    return text
 
 def bytes_to_matrix(text):
     mat = []
@@ -154,7 +158,9 @@ def round_key_gen(key):
 
 def encrypt(key, data):
     key = keygen(key)
+    data = padtext(data)
     print(key)
+    print(data)
     key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
 
