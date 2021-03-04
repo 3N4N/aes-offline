@@ -66,15 +66,98 @@ InvMixer = [
     [BitVector(hexstring="0B"), BitVector(hexstring="0D"), BitVector(hexstring="09"), BitVector(hexstring="0E")]
 ]
 
-b = BitVector(hexstring="4E")
-int_val = b.intValue()
-s = Sbox[int_val]
-s = BitVector(intVal=s, size=8)
-print(s.get_bitvector_in_hex())
+# b = BitVector(hexstring="4E")
+# int_val = b.intValue()
+# s = Sbox[int_val]
+# s = BitVector(intVal=s, size=8)
+# print(s.get_bitvector_in_hex())
 
-AES_modulus = BitVector(bitstring='100011011')
+# AES_modulus = BitVector(bitstring='100011011')
 
-bv1 = BitVector(hexstring="02")
-bv2 = BitVector(hexstring="63")
-bv3 = bv1.gf_multiply_modular(bv2, AES_modulus, 8)
-print(bv3)
+# bv1 = BitVector(hexstring="02")
+# bv2 = BitVector(hexstring="63")
+# bv3 = bv1.gf_multiply_modular(bv2, AES_modulus, 8)
+# print(bv3)
+
+
+
+key = 'Thats my Kung Fu'
+# key = input("Enter the key: ")
+key = key.encode('utf-8').hex()
+
+def keygen(key):
+    key_hex = key.encode('utf-8').hex()
+    if len(key_hex) < 32:
+        key_hex = key_hex.ljust(32, '0')
+    elif len(key_hex) > 32:
+        key_hex = key_hex[:32]
+    return key_hex
+
+
+def bytes_to_matrix(text):
+    mat = []
+    for i in range(0, len(text), 8):
+        li = []
+        for j in range(0, 8, 2):
+            li.append(text[i+j:i+j+2])
+        li = [int(_, 16) for _ in li]
+        mat.append(li)
+    return mat
+
+w = bytes_to_matrix(key)
+
+plain_text = 'Two One Nine Two'
+plain_text = plain_text.encode('utf-8').hex()
+text_hex = bytes.fromhex(plain_text)
+# print(text_hex)
+
+
+
+
+def print_key_mat(key_mat):
+    for i in range(len(key_mat) // 4):
+        print([hex(x) for x in key_mat[i * 4]],
+              [hex(x) for x in key_mat[i * 4 + 1]],
+              [hex(x) for x in key_mat[i * 4 + 2]],
+              [hex(x) for x in key_mat[i * 4 + 3]])
+    # print([list(map(hex,x)) for x in key_mat])
+
+def round_key_gen(key):
+
+    key_mat = bytes_to_matrix(key)
+    n_itr = (len(key_mat) * len(key_mat[0])) / 4
+    n_rnd = 10
+
+    rcon = [0, 1]
+    for _ in range(n_rnd):
+        rcon.append(rcon[-1] * 2)
+        if rcon[-1] > 0x80:
+            rcon[-1] ^= 0x11b
+
+    # print('rcon: ', rcon)
+
+    for i in range(1, n_rnd + 1):
+        root = list(key_mat[-1])
+        # print([hex(x) for x in root])
+        g_root = root
+
+        g_root.append(g_root.pop(0))
+        g_root = [Sbox[_] for _ in root]
+        g_root[0] ^= rcon[i]
+        # print([hex(x) for x in g_root])
+        key_mat.append([key_mat[(i - 1) * 4][j] ^ g_root[j] for j in range(4)])
+        key_mat.append([key_mat[-1][j] ^ key_mat[(i - 1) * 4 + 1][j] for j in range(4)])
+        key_mat.append([key_mat[-1][j] ^ key_mat[(i - 1) * 4 + 2][j] for j in range(4)])
+        key_mat.append([key_mat[-1][j] ^ key_mat[(i - 1) * 4 + 3][j] for j in range(4)])
+
+    print_key_mat(key_mat)
+
+def encrypt(key, data):
+    key = keygen(key)
+    print(key)
+    key_mat = bytes_to_matrix(key)
+    rnd_keys = round_key_gen(key)
+
+
+key = 'Thats my Kung Fu DU'
+encrypt(key, 'Two One Nine Two')
