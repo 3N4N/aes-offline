@@ -93,6 +93,10 @@ def keygen(key):
         key_hex = key_hex[:32]
     return key_hex
 
+def padtext(text):
+    if len(text) % 16 != 0:
+        return text.ljust((len(text) // 16 + 1) * 16, '0')
+    return text
 
 def bytes_to_matrix(text):
     mat = []
@@ -112,9 +116,11 @@ text_hex = bytes.fromhex(plain_text)
 # print(text_hex)
 
 
+def transpose_matrix(mat):
+    return list(map(list, zip(*mat)))
 
 
-def print_key_mat(key_mat):
+def print_Xx4(key_mat):
     for i in range(len(key_mat) // 4):
         print([hex(x) for x in key_mat[i * 4]],
               [hex(x) for x in key_mat[i * 4 + 1]],
@@ -150,13 +156,86 @@ def round_key_gen(key):
         key_mat.append([key_mat[-1][j] ^ key_mat[(i - 1) * 4 + 2][j] for j in range(4)])
         key_mat.append([key_mat[-1][j] ^ key_mat[(i - 1) * 4 + 3][j] for j in range(4)])
 
-    print_key_mat(key_mat)
+    return key_mat
+
+
+def add_rnd_key(t, k):
+    for i in range(4):
+        for j in range(4):
+            t[i][j] ^= k[i][j]
+
+def sub_bytes(t):
+    for i in range(4):
+        for j in range(4):
+            t[i][j] = Sbox[t[i][j]]
+
+def shift_rows(t):
+    t[1][0], t[1][1], t[1][2], t[1][3] = t[1][1], t[1][2], t[1][3], t[1][0]
+    t[2][0], t[2][1], t[2][2], t[2][3] = t[2][2], t[2][3], t[2][0], t[2][1]
+    t[3][0], t[3][1], t[3][2], t[3][3] = t[3][3], t[3][0], t[3][1], t[3][2]
+
+AES_modulus = BitVector(bitstring='100011011')
+
+def mix_cols(t):
+    _t = []
+    for i in range(4):
+        _t.append([0,0,0,0])
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv = bv_t.gf_multiply_modular(Mixer[i][k], AES_modulus, 8)
+                _t[i][j] ^= bv.intValue()
+    for i in range(4):
+        for j in range(4):
+            t[i][j] = _t[i][j]
+
+
+def encrypt_block(n_rnd, key_mat, text):
+    txt_mat = bytes_to_matrix(text)
+    txt_mat = transpose_matrix(txt_mat)
+
+    rnd_key = []
+    rnd_key.append(key_mat[0])
+    rnd_key.append(key_mat[1])
+    rnd_key.append(key_mat[2])
+    rnd_key.append(key_mat[3])
+    rnd_key = transpose_matrix(rnd_key)
+    add_rnd_key(txt_mat, rnd_key)
+
+    for i in range(1, n_rnd):
+        sub_bytes(txt_mat)
+        shift_rows(txt_mat)
+        mix_cols(txt_mat)
+        rnd_key = []
+        rnd_key.append(key_mat[i * 4])
+        rnd_key.append(key_mat[i * 4 + 1])
+        rnd_key.append(key_mat[i * 4 + 2])
+        rnd_key.append(key_mat[i * 4 + 3])
+        rnd_key = transpose_matrix(rnd_key)
+        add_rnd_key(txt_mat, rnd_key)
+
+    sub_bytes(txt_mat)
+    shift_rows(txt_mat)
+    rnd_key = []
+    rnd_key.append(key_mat[n_rnd * 4])
+    rnd_key.append(key_mat[n_rnd * 4 + 1])
+    rnd_key.append(key_mat[n_rnd * 4 + 2])
+    rnd_key.append(key_mat[n_rnd * 4 + 3])
+    rnd_key = transpose_matrix(rnd_key)
+    add_rnd_key(txt_mat, rnd_key)
+
+    print_Xx4(txt_mat)
 
 def encrypt(key, data):
     key = keygen(key)
+    data = padtext(data)
+    data = data.encode('utf-8').hex()
     print(key)
+    print(data)
     key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
+    encrypt_block(10, rnd_keys, data)
 
 
 key = 'Thats my Kung Fu DU'
