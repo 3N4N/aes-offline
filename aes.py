@@ -14,6 +14,8 @@ Install The BitVector Library
 """Tables"""
 
 from BitVector import *
+import binascii
+
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -166,10 +168,20 @@ def sub_bytes(t):
         for j in range(4):
             t[i][j] = Sbox[t[i][j]]
 
+def inv_sub_bytes(s):
+    for i in range(4):
+        for j in range(4):
+            s[i][j] = InvSbox[s[i][j]]
+
 def shift_rows(t):
     t[1][0], t[1][1], t[1][2], t[1][3] = t[1][1], t[1][2], t[1][3], t[1][0]
     t[2][0], t[2][1], t[2][2], t[2][3] = t[2][2], t[2][3], t[2][0], t[2][1]
     t[3][0], t[3][1], t[3][2], t[3][3] = t[3][3], t[3][0], t[3][1], t[3][2]
+
+def inv_shift_rows(t):
+    t[1][0], t[1][1], t[1][2], t[1][3] = t[1][3], t[1][0], t[1][1], t[1][2]
+    t[2][0], t[2][1], t[2][2], t[2][3] = t[2][2], t[2][3], t[2][0], t[2][1]
+    t[3][0], t[3][1], t[3][2], t[3][3] = t[3][1], t[3][2], t[3][3], t[3][0]
 
 AES_modulus = BitVector(bitstring='100011011')
 
@@ -182,6 +194,20 @@ def mix_cols(t):
             for k in range(4):
                 bv_t = BitVector(hexstring=hex(t[k][j])[2:])
                 bv = bv_t.gf_multiply_modular(Mixer[i][k], AES_modulus, 8)
+                _t[i][j] ^= bv.intValue()
+    for i in range(4):
+        for j in range(4):
+            t[i][j] = _t[i][j]
+
+def inv_mix_cols(t):
+    _t = []
+    for i in range(4):
+        _t.append([0,0,0,0])
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv = bv_t.gf_multiply_modular(InvMixer[i][k], AES_modulus, 8)
                 _t[i][j] ^= bv.intValue()
     for i in range(4):
         for j in range(4):
@@ -242,10 +268,63 @@ def encrypt(key, plaintext):
     return ciphertext
 
 
-key = 'Thats my Kung Fu DU'
-# key = 'BUET CSE16 Batch'
-plaintext = 'Two One Nine Two'
-# plaintext = 'WillGraduateSoon'
+def decrypt_block(n_rnd, key_mat, ciphertext):
+    txt_mat = bytes_to_matrix(ciphertext)
+    txt_mat = transpose_matrix(txt_mat)
+
+    rnd_key = []
+    rnd_key.append(key_mat[n_rnd * 4])
+    rnd_key.append(key_mat[n_rnd * 4 + 1])
+    rnd_key.append(key_mat[n_rnd * 4 + 2])
+    rnd_key.append(key_mat[n_rnd * 4 + 3])
+    rnd_key = transpose_matrix(rnd_key)
+    add_rnd_key(txt_mat, rnd_key)
+    inv_shift_rows(txt_mat)
+    inv_sub_bytes(txt_mat)
+
+    for i in range(n_rnd -1, 0, -1):
+        rnd_key = []
+        rnd_key.append(key_mat[i * 4])
+        rnd_key.append(key_mat[i * 4 + 1])
+        rnd_key.append(key_mat[i * 4 + 2])
+        rnd_key.append(key_mat[i * 4 + 3])
+        rnd_key = transpose_matrix(rnd_key)
+        add_rnd_key(txt_mat, rnd_key)
+        inv_mix_cols(txt_mat)
+        inv_shift_rows(txt_mat)
+        inv_sub_bytes(txt_mat)
+
+    rnd_key = []
+    rnd_key.append(key_mat[0])
+    rnd_key.append(key_mat[1])
+    rnd_key.append(key_mat[2])
+    rnd_key.append(key_mat[3])
+    rnd_key = transpose_matrix(rnd_key)
+    add_rnd_key(txt_mat, rnd_key)
+
+    # print_Xx4(txt_mat)
+
+    txt_mat = transpose_matrix(txt_mat)
+    plaintext = ''
+    for i in range(len(txt_mat)):
+        for j in range(len(txt_mat[i])):
+            plaintext += "{:02x}".format(txt_mat[i][j])
+    return plaintext
+
+def decrypt(key, ciphertext):
+    key = keygen(key)
+    ciphertext = padtext(ciphertext)
+    # ciphertext = ciphertext.encode('utf-8').hex()
+    key_mat = bytes_to_matrix(key)
+    rnd_keys = round_key_gen(key)
+    plaintext = decrypt_block(10, rnd_keys, ciphertext)
+    return plaintext
+
+
+# key = 'Thats my Kung Fu DU'
+key = 'BUET CSE16 Batch'
+# plaintext = 'Two One Nine Two'
+plaintext = 'WillGraduateSoon'
 print('Key:')
 print(key, '[ASCII]')
 print(key.encode('utf-8').hex(), '[HEX]\n')
@@ -255,5 +334,9 @@ print(plaintext.encode('utf-8').hex(), '[HEX]\n')
 
 ciphertext = encrypt(key, plaintext)
 print('Cipher Text:')
-print(ciphertext, '[HEX]')
+print(ciphertext, '[HEX]\n')
 # print(bytearray.fromhex(ciphertext).decode(), '[ASCII]')
+
+deciphertext = decrypt(key, ciphertext)
+print('Deciphered Text:')
+print(deciphertext, '[HEX]')
