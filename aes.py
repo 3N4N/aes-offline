@@ -14,7 +14,6 @@ Install The BitVector Library
 """Tables"""
 
 from BitVector import *
-import binascii
 
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -213,6 +212,8 @@ def inv_mix_cols(t):
         for j in range(4):
             t[i][j] = _t[i][j]
 
+def split_blocks(text, block_size=16):
+    return [text[i:i+block_size] for i in range(0, len(text), block_size)]
 
 def encrypt_block(n_rnd, key_mat, plaintext):
     txt_mat = bytes_to_matrix(plaintext)
@@ -260,11 +261,14 @@ def encrypt_block(n_rnd, key_mat, plaintext):
 
 def encrypt(key, plaintext):
     key = keygen(key)
-    plaintext = padtext(plaintext)
-    plaintext = plaintext.encode('utf-8').hex()
     key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
-    ciphertext = encrypt_block(10, rnd_keys, plaintext)
+    plaintext = padtext(plaintext)
+    ciphertext = ''
+    for text_block in split_blocks(plaintext):
+        text_block = text_block.encode('utf-8').hex()
+        cipher_block = encrypt_block(10, rnd_keys, text_block)
+        ciphertext += cipher_block
     return ciphertext
 
 
@@ -313,11 +317,13 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
 
 def decrypt(key, ciphertext):
     key = keygen(key)
-    ciphertext = padtext(ciphertext)
-    # ciphertext = ciphertext.encode('utf-8').hex()
     key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
-    plaintext = decrypt_block(10, rnd_keys, ciphertext)
+    ciphertext = padtext(ciphertext)
+    plaintext = ''
+    for cipher_block in split_blocks(ciphertext, 32):
+        text_block = decrypt_block(10, rnd_keys, cipher_block)
+        plaintext += text_block
     return plaintext
 
 
