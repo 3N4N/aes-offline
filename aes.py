@@ -99,7 +99,7 @@ def keygen(key):
 
 def padtext(text):
     if len(text) % 16 != 0:
-        return text.ljust((len(text) // 16 + 1) * 16, '0')
+        return text.ljust((len(text) // 16 + 1) * 16, ' ')
     return text
 
 
@@ -369,3 +369,44 @@ t_dec = time.time() - st
 print('Scheduling time:', t_sch)
 print('Encryption time:', t_enc)
 print('Decryption time:', t_dec)
+
+key = 'Thats my Kung Fu DU'
+# key = 'Decrypt Task Six'
+
+infile_name = "plaintext.txt"
+outfile_name = "ciphertext.txt"
+ifile = open(infile_name, 'rb')
+ofile = open(outfile_name, 'wb')
+data = ifile.read(1024*1024)
+plaintext = data.decode('utf-8')
+ciphertext = encrypt(key, plaintext)
+ofile.write(ciphertext.encode())
+while data:
+    data = ifile.read(1024*1024)
+    plaintext = data.decode('utf-8')
+    ciphertext = encrypt(key, plaintext)
+    ofile.write(ciphertext.encode())
+ifile.close()
+ofile.close()
+
+infile_name = "ciphertext.txt"
+outfile_name = "deciphertext.txt"
+ifile = open(infile_name, 'rb')
+ofile = open(outfile_name, 'wb')
+data = ifile.read(1024*1024)
+ciphertext = data
+ciphertext = data.decode('utf-8')
+ciphertext = ciphertext.replace('\n', '')
+deciphertext = decrypt(key, ciphertext)
+deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
+ofile.write(deciphertext.encode())
+while data:
+    data = ifile.read(1024*1024)
+    ciphertext = data
+    ciphertext = data.decode('utf-8')
+    ciphertext = ciphertext.replace('\n', '')
+    deciphertext = decrypt(key, ciphertext)
+    deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
+    ofile.write(deciphertext.encode())
+ifile.close()
+ofile.close()
