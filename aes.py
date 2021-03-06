@@ -369,38 +369,29 @@ t_dec = time.time() - st
 print('Scheduling time:', t_sch)
 print('Encryption time:', t_enc)
 print('Decryption time:', t_dec)
+print()
 
 key = 'Thats my Kung Fu DU'
 # key = 'Decrypt Task Six'
 
-infile_name = "plaintext.txt"
-outfile_name = "ciphertext.txt"
-ifile = open(infile_name, 'rb')
-ofile = open(outfile_name, 'wb')
-data = ifile.read(1024*1024)
-plaintext = data.decode('utf-8')
-ciphertext = encrypt(key, plaintext)
-ofile.write(ciphertext.encode())
-while data:
+def encrypt_file(infile_name, outfile_name):
+    ifile = open(infile_name, 'rb')
+    ofile = open(outfile_name, 'wb')
     data = ifile.read(1024*1024)
     plaintext = data.decode('utf-8')
     ciphertext = encrypt(key, plaintext)
     ofile.write(ciphertext.encode())
-ifile.close()
-ofile.close()
+    while data:
+        data = ifile.read(1024*1024)
+        plaintext = data.decode('utf-8')
+        ciphertext = encrypt(key, plaintext)
+        ofile.write(ciphertext.encode())
+    ifile.close()
+    ofile.close()
 
-infile_name = "ciphertext.txt"
-outfile_name = "deciphertext.txt"
-ifile = open(infile_name, 'rb')
-ofile = open(outfile_name, 'wb')
-data = ifile.read(1024*1024)
-ciphertext = data
-ciphertext = data.decode('utf-8')
-ciphertext = ciphertext.replace('\n', '')
-deciphertext = decrypt(key, ciphertext)
-deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
-ofile.write(deciphertext.encode())
-while data:
+def decrypt_file(infile_name, outfile_name):
+    ifile = open(infile_name, 'rb')
+    ofile = open(outfile_name, 'wb')
     data = ifile.read(1024*1024)
     ciphertext = data
     ciphertext = data.decode('utf-8')
@@ -408,5 +399,23 @@ while data:
     deciphertext = decrypt(key, ciphertext)
     deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
     ofile.write(deciphertext.encode())
-ifile.close()
-ofile.close()
+    while data:
+        data = ifile.read(1024*1024)
+        ciphertext = data
+        ciphertext = data.decode('utf-8')
+        ciphertext = ciphertext.replace('\n', '')
+        deciphertext = decrypt(key, ciphertext)
+        deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
+        ofile.write(deciphertext.encode())
+    ifile.close()
+    ofile.close()
+
+fn_plaintext = "plaintext.txt"
+fn_ciphertext = "ciphertext.txt"
+fn_deciphertext = "deciphertext.txt"
+print("Encrypting file...")
+encrypt_file(fn_plaintext, fn_ciphertext)
+print("Finished.")
+print("Decrypting file...")
+decrypt_file(fn_ciphertext, fn_deciphertext)
+print("Finished.")
