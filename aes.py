@@ -96,6 +96,18 @@ def keygen(key):
         key_hex = key_hex[:32]
     return key_hex
 
+def pad(m):
+    padlen = 16 - (len(m) // 2) % 16
+    return m + ("{:02x}".format(padlen)) * (padlen)
+
+def unpad(ct):
+    if len(ct) == 0:
+        return ct
+    padlen = int(ct[-2] + ct[-1], 16)
+    # print('len:', padlen)
+    # print(ct)
+    # print(ct[:-(padlen * 2)])
+    return ct[:-(padlen * 2)]
 
 def padtext(text):
     if len(text) % 16 != 0:
@@ -317,10 +329,10 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
 
 def encrypt(key, plaintext):
     rnd_keys = schedule_keys(key)
-    plaintext = padtext(plaintext)
+    plaintext = pad(plaintext)
     ciphertext = ''
-    for text_block in split_blocks(plaintext, 16):
-        text_block = text_block.encode('utf-8').hex()
+    for text_block in split_blocks(plaintext, 32):
+        # text_block = text_block.encode('utf-8').hex()
         cipher_block = encrypt_block(10, rnd_keys, text_block)
         ciphertext += cipher_block
     return ciphertext
@@ -332,13 +344,12 @@ def decrypt(key, ciphertext):
     for cipher_block in split_blocks(ciphertext, 32):
         text_block = decrypt_block(10, rnd_keys, cipher_block)
         plaintext += text_block
+    plaintext = unpad(plaintext)
     return plaintext
 
 
 # key = 'Thats my Kung Fu DU'
 key = 'BUET CSE16 Batch'
-# plaintext = 'Two One Nine Two'
-plaintext = 'WillGraduateSoon'
 print('Key:')
 print(key, '[ASCII]')
 print(key.encode('utf-8').hex(), '[HEX]\n')
@@ -347,14 +358,14 @@ st = time.time()
 rnd_keys = schedule_keys(key)
 t_sch = time.time() - st
 
-plaintext = 'Two One Nine Two'
+# plaintext = 'Two One Nine Two'
 plaintext = 'WillGraduateSoon'
 print('Plain Text:')
 print(plaintext, '[ASCII]')
 print(plaintext.encode('utf-8').hex(), '[HEX]\n')
 
 st = time.time()
-ciphertext = encrypt(key, plaintext)
+ciphertext = encrypt(key, plaintext.encode('utf-8').hex())
 print('Cipher Text:')
 print(ciphertext, '[HEX]\n')
 t_enc = time.time() - st
@@ -377,13 +388,11 @@ key = 'Thats my Kung Fu DU'
 def encrypt_file(infile_name, outfile_name):
     ifile = open(infile_name, 'rb')
     ofile = open(outfile_name, 'wb')
-    data = ifile.read(1024*1024)
-    plaintext = data.decode('utf-8')
-    ciphertext = encrypt(key, plaintext)
-    ofile.write(ciphertext.encode())
-    while data:
+    while True:
         data = ifile.read(1024*1024)
-        plaintext = data.decode('utf-8')
+        if not data:
+            break
+        plaintext = data.hex()
         ciphertext = encrypt(key, plaintext)
         ofile.write(ciphertext.encode())
     ifile.close()
@@ -392,32 +401,27 @@ def encrypt_file(infile_name, outfile_name):
 def decrypt_file(infile_name, outfile_name):
     ifile = open(infile_name, 'rb')
     ofile = open(outfile_name, 'wb')
-    data = ifile.read(1024*1024)
-    ciphertext = data
-    ciphertext = data.decode('utf-8')
-    ciphertext = ciphertext.replace('\n', '')
-    deciphertext = decrypt(key, ciphertext)
-    deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
-    ofile.write(deciphertext.encode())
-    while data:
+    while True:
         data = ifile.read(1024*1024)
+        if not data:
+            break
         ciphertext = data
         ciphertext = data.decode('utf-8')
         ciphertext = ciphertext.replace('\n', '')
         deciphertext = decrypt(key, ciphertext)
-        deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
-        ofile.write(deciphertext.encode())
+        deciphertext = bytes.fromhex(deciphertext)
+        ofile.write(deciphertext)
     ifile.close()
     ofile.close()
 
-fn_plaintext = "plaintext.txt"
-fn_ciphertext = "ciphertext.txt"
-fn_deciphertext = "deciphertext.txt"
+fn_plaintxt = "plain.txt"
+fn_ciphertxt = "cipher.txt"
+fn_deciphertxt = "decipher.txt"
 print("Encrypting file...")
-encrypt_file(fn_plaintext, fn_ciphertext)
+encrypt_file(fn_plaintxt, fn_ciphertxt)
 print("Finished.")
 print("Decrypting file...")
-decrypt_file(fn_ciphertext, fn_deciphertext)
+decrypt_file(fn_ciphertxt, fn_deciphertxt)
 print("Finished.\n")
 
 
