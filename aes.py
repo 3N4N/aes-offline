@@ -471,7 +471,7 @@ def gen_sbox():
     Generates Rijndael's S-box.
     """
     sbox = [0x63]
-    bv = BitVector(intVal=63, size=8)
+    bv = BitVector(intVal=0x63, size=8)
     for i in range(1, 256):
         a = BitVector(intVal=i, size=8)
         b = a.gf_MI(AES_modulus, 8)
