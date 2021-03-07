@@ -419,6 +419,15 @@ print("Decrypting file...")
 decrypt_file(fn_ciphertxt, fn_deciphertxt)
 print("Finished.\n")
 
+fn_plainimg = "plain.jpg"
+fn_cipherimg = "cipher.jpg"
+fn_decipherimg = "decipher.jpg"
+print("Encrypting file...")
+encrypt_file(fn_plainimg, fn_cipherimg)
+print("Finished.")
+print("Decrypting file...")
+decrypt_file(fn_cipherimg, fn_decipherimg)
+print("Finished.")
 
 def gen_sbox():
     sbox = [0x63]
@@ -438,13 +447,13 @@ def gen_sbox():
 
 def gen_invsbox():
     inv_sbox = []
-    offset = BitVector(intVal=0x5, size=8)
+    bv = BitVector(intVal=0x5, size=8)
     for i in range(0, 0x100):
         if i == 0x63:
             inv_sbox.append(0x0)
             continue
         s = BitVector(intVal=i, size=8)
-        b = offset ^ (s << 1) ^ (s << 2) ^ (s << 3)
+        b = bv ^ (s << 1) ^ (s << 2) ^ (s << 3)
         inv_sbox.append(b.gf_MI(AES_modulus, 8).intValue())
 
     # for i in range(0, 16):
