@@ -83,34 +83,49 @@ InvMixer = [
 
 
 
-key = 'Thats my Kung Fu'
-# key = input("Enter the key: ")
-key = key.encode('utf-8').hex()
 
 
 def keygen(key):
+    """
+    Returns hex string of 16 characters ascii key.
+    """
     key_hex = key.encode('utf-8').hex()
+
+    # pad the key with 0x0 to be 16-byte long.
     if len(key_hex) < 32:
         key_hex = key_hex.ljust(32, '0')
+    # trim the key to be 16-byte long.
     elif len(key_hex) > 32:
         key_hex = key_hex[:32]
     return key_hex
 
 def pad(m):
+    """
+    Pads message with PKCS#5 padding so the length is a multiple of 16.
+    """
     padlen = 16 - (len(m) // 2) % 16
     return m + ("{:02x}".format(padlen)) * (padlen)
 
 def unpad(ct):
+    """
+    Unpads cipher with PKCS#5 padding.
+    """
     padlen = int(ct[-2] + ct[-1], 16)
     return ct[:-(padlen * 2)]
 
 def padtext(text):
+    """
+    Pads message with spaces so the length is a multiple of 16.
+    """
     if len(text) % 16 != 0:
         return text.ljust((len(text) // 16 + 1) * 16, ' ')
     return text
 
 
 def bytes_to_matrix(text):
+    """
+    Returns a 2d matrix with 4 columns from text.
+    """
     mat = []
     for i in range(0, len(text), 8):
         li = []
@@ -122,10 +137,19 @@ def bytes_to_matrix(text):
 
 
 def transpose_matrix(mat):
+    """
+    Transposes a square matrix.
+
+    MUST be a square matrix. Cannot guarantee safe execution if a non-square
+    matrix is given as input.
+    """
     return list(map(list, zip(*mat)))
 
 
 def print_Xx4(key_mat):
+    """
+    Prints a 2d matrix which has 4 columns.
+    """
     for i in range(len(key_mat) // 4):
         print([hex(x) for x in key_mat[i * 4]],
               [hex(x) for x in key_mat[i * 4 + 1]],
@@ -135,6 +159,9 @@ def print_Xx4(key_mat):
 
 
 def round_key_gen(key):
+    """
+    Generates the round keys for rounds of AES encryption and decryption.
+    """
 
     key_mat = bytes_to_matrix(key)
     n_itr = (len(key_mat) * len(key_mat[0])) / 4
@@ -146,7 +173,6 @@ def round_key_gen(key):
         if rcon[-1] > 0x80:
             rcon[-1] ^= 0x11b
 
-    # print('rcon: ', rcon)
 
     for i in range(1, n_rnd + 1):
         root = list(key_mat[-1])
@@ -166,7 +192,6 @@ def round_key_gen(key):
 
 def schedule_keys(key):
     key = keygen(key)
-    key_mat = bytes_to_matrix(key)
     rnd_keys = round_key_gen(key)
     return rnd_keys
 
@@ -235,6 +260,9 @@ def split_blocks(text, block_size):
 
 
 def encrypt_block(n_rnd, key_mat, plaintext):
+    """
+    Encrypts a textblock of 16 bytes.
+    """
     txt_mat = bytes_to_matrix(plaintext)
     txt_mat = transpose_matrix(txt_mat)
 
@@ -279,6 +307,9 @@ def encrypt_block(n_rnd, key_mat, plaintext):
 
 
 def decrypt_block(n_rnd, key_mat, ciphertext):
+    """
+    Decrypts a textblock of 16 bytes.
+    """
     txt_mat = bytes_to_matrix(ciphertext)
     txt_mat = transpose_matrix(txt_mat)
 
@@ -323,6 +354,9 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
 
 
 def encrypt(key, plaintext):
+    """
+    Encrypts plaintext of hexstring.
+    """
     rnd_keys = schedule_keys(key)
     plaintext = pad(plaintext)
     ciphertext = ''
@@ -334,6 +368,9 @@ def encrypt(key, plaintext):
 
 
 def decrypt(key, ciphertext):
+    """
+    Decrypts plaintext of hexstring.
+    """
     rnd_keys = schedule_keys(key)
     plaintext = ''
     for cipher_block in split_blocks(ciphertext, 32):
@@ -430,6 +467,9 @@ decrypt_file(fn_cipherimg, fn_decipherimg)
 print("Finished.")
 
 def gen_sbox():
+    """
+    Generates Rijndael's S-box.
+    """
     sbox = [0x63]
     bv = BitVector(intVal=63, size=8)
     for i in range(1, 256):
@@ -446,6 +486,9 @@ def gen_sbox():
     return sbox
 
 def gen_invsbox():
+    """
+    Generates Rijndael's Inverse S-box.
+    """
     inv_sbox = []
     bv = BitVector(intVal=0x5, size=8)
     for i in range(0, 0x100):
