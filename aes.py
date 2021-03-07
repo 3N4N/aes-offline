@@ -418,4 +418,72 @@ encrypt_file(fn_plaintext, fn_ciphertext)
 print("Finished.")
 print("Decrypting file...")
 decrypt_file(fn_ciphertext, fn_deciphertext)
-print("Finished.")
+print("Finished.\n")
+
+
+def gen_sbox():
+    sbox = [0x63]
+    bv = BitVector(hexstring="63")
+    for i in range(1, 256):
+        a = BitVector(hexstring=hex(i)[2:])
+        b = a.gf_MI(AES_modulus, 8)
+        s = bv ^ b ^ (b << 1) ^ (b << 1) ^ (b << 1) ^ (b << 1)
+        sbox.append(s.intValue())
+
+    # for i in range(0, 16):
+    #     for j in range(0, 16):
+    #         print(hex(sbox[i * 16 + j]), end=' ')
+    #     print()
+
+    return sbox
+
+def gen_invsbox():
+    inv_sbox = []
+    for i in range(0, 256):
+        inv_sbox.append([0x00])
+    bv = BitVector(hexstring="63")
+    for i in range(1, 256):
+        if i == 0x63:
+            inv_sbox[0x63] = 0x00
+            continue
+        if i == 0xfb:
+            inv_sbox[0xfb] = 0x63
+        a = BitVector(hexstring=hex(i)[2:])
+        b = a.gf_MI(AES_modulus, 8)
+        s = bv ^ b ^ (b << 1) ^ (b << 1) ^ (b << 1) ^ (b << 1)
+        inv_sbox[s.intValue()] = i
+
+    # for i in range(0, 16):
+    #     for j in range(0, 16):
+    #         print(hex(inv_sbox[i * 16 + j]), end=' ')
+    #     print()
+
+    return inv_sbox
+
+def check_sbox(sbox):
+    for i in range(0, 256):
+        if Sbox[i] != sbox[i]:
+            print('Problem found in', hex(i))
+            return False
+    return True
+
+def check_invsbox(invsbox):
+    for i in range(0, 256):
+        if InvSbox[i] != invsbox[i]:
+            print('Problem found in', hex(i))
+            return False
+    return True
+
+print("Generating SBox...")
+sbox = gen_sbox()
+if (check_sbox(sbox)):
+    print('Sbox generation successful!\n')
+else:
+    print('Sbox generation unsuccessful!\n')
+
+print("Generating InvSBox...")
+invsbox = gen_invsbox()
+if (check_invsbox(invsbox)):
+    print('InvSbox generation successful!\n')
+else:
+    print('InvSbox generation unsuccessful!\n')
