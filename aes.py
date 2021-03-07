@@ -14,6 +14,7 @@ Install The BitVector Library
 """Tables"""
 
 from BitVector import *
+import time
 
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -98,7 +99,7 @@ def keygen(key):
 
 def padtext(text):
     if len(text) % 16 != 0:
-        return text.ljust((len(text) // 16 + 1) * 16, '0')
+        return text.ljust((len(text) // 16 + 1) * 16, ' ')
     return text
 
 
@@ -156,11 +157,18 @@ def round_key_gen(key):
 
     return key_mat
 
+def schedule_keys(key):
+    key = keygen(key)
+    key_mat = bytes_to_matrix(key)
+    rnd_keys = round_key_gen(key)
+    return rnd_keys
+
 
 def add_rnd_key(t, k):
     for i in range(4):
         for j in range(4):
             t[i][j] ^= k[i][j]
+
 
 def sub_bytes(t):
     for i in range(4):
@@ -172,6 +180,7 @@ def inv_sub_bytes(s):
         for j in range(4):
             s[i][j] = InvSbox[s[i][j]]
 
+
 def shift_rows(t):
     t[1][0], t[1][1], t[1][2], t[1][3] = t[1][1], t[1][2], t[1][3], t[1][0]
     t[2][0], t[2][1], t[2][2], t[2][3] = t[2][2], t[2][3], t[2][0], t[2][1]
@@ -182,6 +191,7 @@ def inv_shift_rows(t):
     t[2][0], t[2][1], t[2][2], t[2][3] = t[2][2], t[2][3], t[2][0], t[2][1]
     t[3][0], t[3][1], t[3][2], t[3][3] = t[3][1], t[3][2], t[3][3], t[3][0]
 
+
 AES_modulus = BitVector(bitstring='100011011')
 
 def mix_cols(t):
@@ -191,7 +201,7 @@ def mix_cols(t):
     for i in range(4):
         for j in range(4):
             for k in range(4):
-                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv_t = BitVector(intVal=t[k][j], size=8)
                 bv = bv_t.gf_multiply_modular(Mixer[i][k], AES_modulus, 8)
                 _t[i][j] ^= bv.intValue()
     for i in range(4):
@@ -205,15 +215,17 @@ def inv_mix_cols(t):
     for i in range(4):
         for j in range(4):
             for k in range(4):
-                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv_t = BitVector(intVal=t[k][j], size=8)
                 bv = bv_t.gf_multiply_modular(InvMixer[i][k], AES_modulus, 8)
                 _t[i][j] ^= bv.intValue()
     for i in range(4):
         for j in range(4):
             t[i][j] = _t[i][j]
 
-def split_blocks(text, block_size=16):
+
+def split_blocks(text, block_size):
     return [text[i:i+block_size] for i in range(0, len(text), block_size)]
+
 
 def encrypt_block(n_rnd, key_mat, plaintext):
     txt_mat = bytes_to_matrix(plaintext)
@@ -256,19 +268,6 @@ def encrypt_block(n_rnd, key_mat, plaintext):
     for i in range(len(txt_mat)):
         for j in range(len(txt_mat[i])):
             ciphertext += "{:02x}".format(txt_mat[i][j])
-    return ciphertext
-
-
-def encrypt(key, plaintext):
-    key = keygen(key)
-    key_mat = bytes_to_matrix(key)
-    rnd_keys = round_key_gen(key)
-    plaintext = padtext(plaintext)
-    ciphertext = ''
-    for text_block in split_blocks(plaintext):
-        text_block = text_block.encode('utf-8').hex()
-        cipher_block = encrypt_block(10, rnd_keys, text_block)
-        ciphertext += cipher_block
     return ciphertext
 
 
@@ -315,11 +314,20 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
             plaintext += "{:02x}".format(txt_mat[i][j])
     return plaintext
 
+
+def encrypt(key, plaintext):
+    rnd_keys = schedule_keys(key)
+    plaintext = padtext(plaintext)
+    ciphertext = ''
+    for text_block in split_blocks(plaintext, 16):
+        text_block = text_block.encode('utf-8').hex()
+        cipher_block = encrypt_block(10, rnd_keys, text_block)
+        ciphertext += cipher_block
+    return ciphertext
+
+
 def decrypt(key, ciphertext):
-    key = keygen(key)
-    key_mat = bytes_to_matrix(key)
-    rnd_keys = round_key_gen(key)
-    ciphertext = padtext(ciphertext)
+    rnd_keys = schedule_keys(key)
     plaintext = ''
     for cipher_block in split_blocks(ciphertext, 32):
         text_block = decrypt_block(10, rnd_keys, cipher_block)
@@ -334,15 +342,143 @@ plaintext = 'WillGraduateSoon'
 print('Key:')
 print(key, '[ASCII]')
 print(key.encode('utf-8').hex(), '[HEX]\n')
+
+st = time.time()
+rnd_keys = schedule_keys(key)
+t_sch = time.time() - st
+
+plaintext = 'Two One Nine Two'
+plaintext = 'WillGraduateSoon'
 print('Plain Text:')
 print(plaintext, '[ASCII]')
 print(plaintext.encode('utf-8').hex(), '[HEX]\n')
 
+st = time.time()
 ciphertext = encrypt(key, plaintext)
 print('Cipher Text:')
 print(ciphertext, '[HEX]\n')
-# print(bytearray.fromhex(ciphertext).decode(), '[ASCII]')
+t_enc = time.time() - st
 
+st = time.time()
 deciphertext = decrypt(key, ciphertext)
 print('Deciphered Text:')
 print(deciphertext, '[HEX]')
+print(bytes.fromhex(deciphertext).decode('utf-8'), '[ASCII]\n')
+t_dec = time.time() - st
+
+print('Scheduling time:', t_sch)
+print('Encryption time:', t_enc)
+print('Decryption time:', t_dec)
+print()
+
+key = 'Thats my Kung Fu DU'
+# key = 'Decrypt Task Six'
+
+def encrypt_file(infile_name, outfile_name):
+    ifile = open(infile_name, 'rb')
+    ofile = open(outfile_name, 'wb')
+    data = ifile.read(1024*1024)
+    plaintext = data.decode('utf-8')
+    ciphertext = encrypt(key, plaintext)
+    ofile.write(ciphertext.encode())
+    while data:
+        data = ifile.read(1024*1024)
+        plaintext = data.decode('utf-8')
+        ciphertext = encrypt(key, plaintext)
+        ofile.write(ciphertext.encode())
+    ifile.close()
+    ofile.close()
+
+def decrypt_file(infile_name, outfile_name):
+    ifile = open(infile_name, 'rb')
+    ofile = open(outfile_name, 'wb')
+    data = ifile.read(1024*1024)
+    ciphertext = data
+    ciphertext = data.decode('utf-8')
+    ciphertext = ciphertext.replace('\n', '')
+    deciphertext = decrypt(key, ciphertext)
+    deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
+    ofile.write(deciphertext.encode())
+    while data:
+        data = ifile.read(1024*1024)
+        ciphertext = data
+        ciphertext = data.decode('utf-8')
+        ciphertext = ciphertext.replace('\n', '')
+        deciphertext = decrypt(key, ciphertext)
+        deciphertext = bytes.fromhex(deciphertext).decode('utf-8')
+        ofile.write(deciphertext.encode())
+    ifile.close()
+    ofile.close()
+
+fn_plaintext = "plaintext.txt"
+fn_ciphertext = "ciphertext.txt"
+fn_deciphertext = "deciphertext.txt"
+print("Encrypting file...")
+encrypt_file(fn_plaintext, fn_ciphertext)
+print("Finished.")
+print("Decrypting file...")
+decrypt_file(fn_ciphertext, fn_deciphertext)
+print("Finished.\n")
+
+
+def gen_sbox():
+    sbox = [0x63]
+    bv = BitVector(intVal=63, size=8)
+    for i in range(1, 256):
+        a = BitVector(intVal=i, size=8)
+        b = a.gf_MI(AES_modulus, 8)
+        s = bv ^ b ^ (b << 1) ^ (b << 1) ^ (b << 1) ^ (b << 1)
+        sbox.append(s.intValue())
+
+    # for i in range(0, 16):
+    #     for j in range(0, 16):
+    #         print(hex(sbox[i * 16 + j]), end=' ')
+    #     print()
+
+    return sbox
+
+def gen_invsbox():
+    inv_sbox = []
+    offset = BitVector(intVal=0x5, size=8)
+    for i in range(0, 0x100):
+        if i == 0x63:
+            inv_sbox.append(0x0)
+            continue
+        s = BitVector(intVal=i, size=8)
+        b = offset ^ (s << 1) ^ (s << 2) ^ (s << 3)
+        inv_sbox.append(b.gf_MI(AES_modulus, 8).intValue())
+
+    # for i in range(0, 16):
+    #     for j in range(0, 16):
+    #         print(hex(inv_sbox[i * 16 + j]), end=' ')
+    #     print()
+
+    return inv_sbox
+
+def check_sbox(sbox):
+    for i in range(0, 256):
+        if Sbox[i] != sbox[i]:
+            print('Problem found in', hex(i))
+            return False
+    return True
+
+def check_invsbox(invsbox):
+    for i in range(0, 256):
+        if InvSbox[i] != invsbox[i]:
+            print('Problem found in', hex(i))
+            return False
+    return True
+
+print("Generating SBox...")
+sbox = gen_sbox()
+if (check_sbox(sbox)):
+    print('Sbox generation successful!\n')
+else:
+    print('Sbox generation unsuccessful!\n')
+
+print("Generating InvSBox...")
+invsbox = gen_invsbox()
+if (check_invsbox(invsbox)):
+    print('InvSbox generation successful!\n')
+else:
+    print('InvSbox generation unsuccessful!\n')
