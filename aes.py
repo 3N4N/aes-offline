@@ -201,7 +201,7 @@ def mix_cols(t):
     for i in range(4):
         for j in range(4):
             for k in range(4):
-                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv_t = BitVector(intVal=t[k][j], size=8)
                 bv = bv_t.gf_multiply_modular(Mixer[i][k], AES_modulus, 8)
                 _t[i][j] ^= bv.intValue()
     for i in range(4):
@@ -215,7 +215,7 @@ def inv_mix_cols(t):
     for i in range(4):
         for j in range(4):
             for k in range(4):
-                bv_t = BitVector(hexstring=hex(t[k][j])[2:])
+                bv_t = BitVector(intVal=t[k][j], size=8)
                 bv = bv_t.gf_multiply_modular(InvMixer[i][k], AES_modulus, 8)
                 _t[i][j] ^= bv.intValue()
     for i in range(4):
@@ -423,9 +423,9 @@ print("Finished.\n")
 
 def gen_sbox():
     sbox = [0x63]
-    bv = BitVector(hexstring="63")
+    bv = BitVector(intVal=63, size=8)
     for i in range(1, 256):
-        a = BitVector(hexstring=hex(i)[2:])
+        a = BitVector(intVal=i, size=8)
         b = a.gf_MI(AES_modulus, 8)
         s = bv ^ b ^ (b << 1) ^ (b << 1) ^ (b << 1) ^ (b << 1)
         sbox.append(s.intValue())
@@ -439,19 +439,14 @@ def gen_sbox():
 
 def gen_invsbox():
     inv_sbox = []
-    for i in range(0, 256):
-        inv_sbox.append([0x00])
-    bv = BitVector(hexstring="63")
-    for i in range(1, 256):
+    offset = BitVector(intVal=0x5, size=8)
+    for i in range(0, 0x100):
         if i == 0x63:
-            inv_sbox[0x63] = 0x00
+            inv_sbox.append(0x0)
             continue
-        if i == 0xfb:
-            inv_sbox[0xfb] = 0x63
-        a = BitVector(hexstring=hex(i)[2:])
-        b = a.gf_MI(AES_modulus, 8)
-        s = bv ^ b ^ (b << 1) ^ (b << 1) ^ (b << 1) ^ (b << 1)
-        inv_sbox[s.intValue()] = i
+        s = BitVector(intVal=i, size=8)
+        b = offset ^ (s << 1) ^ (s << 2) ^ (s << 3)
+        inv_sbox.append(b.gf_MI(AES_modulus, 8).intValue())
 
     # for i in range(0, 16):
     #     for j in range(0, 16):
