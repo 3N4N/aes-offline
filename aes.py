@@ -101,12 +101,7 @@ def pad(m):
     return m + ("{:02x}".format(padlen)) * (padlen)
 
 def unpad(ct):
-    if len(ct) == 0:
-        return ct
     padlen = int(ct[-2] + ct[-1], 16)
-    # print('len:', padlen)
-    # print(ct)
-    # print(ct[:-(padlen * 2)])
     return ct[:-(padlen * 2)]
 
 def padtext(text):
