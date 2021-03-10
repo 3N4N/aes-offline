@@ -320,10 +320,10 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
     rnd_key.append(key_mat[n_rnd * 4 + 3])
     rnd_key = transpose_matrix(rnd_key)
     add_rnd_key(txt_mat, rnd_key)
-    inv_shift_rows(txt_mat)
-    inv_sub_bytes(txt_mat)
 
-    for i in range(n_rnd -1, 0, -1):
+    for i in range(n_rnd - 1, 0, -1):
+        inv_shift_rows(txt_mat)
+        inv_sub_bytes(txt_mat)
         rnd_key = []
         rnd_key.append(key_mat[i * 4])
         rnd_key.append(key_mat[i * 4 + 1])
@@ -332,9 +332,9 @@ def decrypt_block(n_rnd, key_mat, ciphertext):
         rnd_key = transpose_matrix(rnd_key)
         add_rnd_key(txt_mat, rnd_key)
         inv_mix_cols(txt_mat)
-        inv_shift_rows(txt_mat)
-        inv_sub_bytes(txt_mat)
 
+    inv_shift_rows(txt_mat)
+    inv_sub_bytes(txt_mat)
     rnd_key = []
     rnd_key.append(key_mat[0])
     rnd_key.append(key_mat[1])
